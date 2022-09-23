@@ -1,6 +1,8 @@
+# bukti sudah diupdate
 import pygame
 import os
 pygame.font.init()  # initialize pygame font library
+pygame.mixer.init()  # initialize pygame sound library
 WIDTH, HEIGHT = 900, 500
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("First Game!")
@@ -11,7 +13,11 @@ RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 BORDER = pygame.Rect(WIDTH//2 - 5, 0, 10, HEIGHT)
 
+BULLET_HIT_SOUND = pygame.mixer.Sound(os.path.join("assets", "Grenade+1.mp3"))
+BULLET_FIRE_SOUND = pygame.mixer.Sound(os.path.join("assets", "Gun+Silencer.mp3"))
+
 HEALTH_FONT = pygame.font.SysFont("comicsans", 40)
+WINNER_FONT = pygame.font.SysFont("comicsans", 100)
 
 FPS = 60
 VEL = 5
@@ -44,9 +50,10 @@ def draw_window(red, yellow, red_bullets, yellow_bullets, red_health, yellow_hea
     WIN.blit(BACKGROUND, (0, 0))  # background harus layer paling belakang
     pygame.draw.rect(WIN, BLACK, BORDER)
 
-    red_health_text = HEALTH_FONT.render("Health : " + str(red_health), 1, WHITE)
-    yellow_health_text = HEALTH_FONT.render("Health : " + str(yellow_health), 1, WHITE)
-
+    red_health_text = HEALTH_FONT.render(f"Health : {red_health}", 1, WHITE)
+    yellow_health_text = HEALTH_FONT.render(f"Health : {yellow_health}", 1, WHITE)
+    
+    # create 2 text objects
     WIN.blit(red_health_text, (WIDTH - red_health_text.get_width() - 30, 10))
     WIN.blit(yellow_health_text, (10, 10))
 
@@ -61,6 +68,12 @@ def draw_window(red, yellow, red_bullets, yellow_bullets, red_health, yellow_hea
     
 
     pygame.display.update()  # harus di update manually setiap ada perubahan 
+
+def draw_winner(text):
+    draw_text = WINNER_FONT.render(text, 1, WHITE)
+    WIN.blit(draw_text, (WIDTH/2 - draw_text.get_width()/2, HEIGHT/2 - draw_text.get_height()/2))
+    pygame.display.update()
+    pygame.time.delay(2000)
 
 
 def yellow_handle_movement(keys_pressed, yellow):
@@ -118,30 +131,36 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+                pygame.quit()
             
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LSHIFT and len(yellow_bullets) < MAX_BULLETS:
                     bullet = pygame.Rect(yellow.x + yellow.width, yellow.y + yellow.height//2 - 2, 10, 5)  # bikin peluru keluar dari yellow
                     yellow_bullets.append(bullet)
+                    BULLET_FIRE_SOUND.play()
                 
                 if event.key == pygame.K_RSHIFT and len(red_bullets) < MAX_BULLETS:
                     bullet = pygame.Rect(red.x, red.y + yellow.height//2 - 2, 10, 5)
                     red_bullets.append(bullet)
+                    BULLET_FIRE_SOUND.play()
 
-                if event.type == RED_HIT:
-                    red_health -= 1
-                if event.type == YELLOW_HIT:
-                    yellow_health -= 1
+            if event.type == RED_HIT:
+                red_health -= 1
+                BULLET_HIT_SOUND.play()
+            if event.type == YELLOW_HIT:
+                yellow_health -= 1
+                BULLET_HIT_SOUND.play()
             
-            winner_text = ""
-            if red_health <= 0:
-                winner_text = "YELLOW WINS"
-            
-            if yellow_health <= 0:
-                winner_text = "RED WINS"
-            
-            if winner_text != "":
-                pass  # if someone won
+        winner_text = ""
+        if red_health <= 0:
+            winner_text = "YELLOW WINS"
+        
+        if yellow_health <= 0:
+            winner_text = "RED WINS"
+        
+        if winner_text != "":
+            draw_winner(winner_text)  # if someone won
+            break
             
         keys_pressed = pygame.key.get_pressed()
         yellow_handle_movement(keys_pressed, yellow)
@@ -150,7 +169,8 @@ def main():
         handle_bullets(yellow_bullets, red_bullets, yellow, red)
 
         draw_window(red, yellow, red_bullets, yellow_bullets, red_health, yellow_health)
-    pygame.quit()    
+
+    main()   
 
 
 if __name__ == "__main__":
